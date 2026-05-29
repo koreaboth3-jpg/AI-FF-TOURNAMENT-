@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AR CHAMPION</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+body{margin:0;font-family:Poppins;background:#f8fafc;padding-bottom:90px;}
+header{display:flex;justify-content:space-between;padding:20px;background:#fff;position:sticky;top:0;}
+.logo{font-weight:700;color:#00c48c;font-size:22px;}
+.wallet{background:#00c48c;color:#fff;padding:8px 14px;border-radius:10px;}
+.container{padding:15px;}
+
+.auth-box{background:#fff;padding:20px;border-radius:15px;margin-top:40px;}
+input{width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:10px;}
+button{width:100%;padding:12px;background:#00c48c;color:#fff;border:none;border-radius:10px;font-weight:700;margin-top:8px;}
+
+.page{display:none;}
+
+.bottom-nav{
+position:fixed;bottom:0;width:100%;
+display:flex;justify-content:space-around;
+background:#fff;padding:10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="logo">AR CHAMPION</div>
+<div class="wallet">₹ <span id="balance">0</span></div>
+</header>
+
+<div class="container">
+
+<!-- AUTH -->
+<div id="authPage">
+<div class="auth-box">
+
+<h3 id="authTitle">Login</h3>
+
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Password">
+
+<button onclick="handleAuth()" id="authBtn">Login</button>
+
+<!-- ⭐ GOOGLE LOGIN BUTTON -->
+<button onclick="googleLogin()" style="background:#db4437;">
+Continue with Google
+</button>
+
+<p style="text-align:center;color:#00c48c;cursor:pointer" onclick="toggle()">
+<span id="toggleText">Create Account</span>
+</p>
+
+</div>
+</div>
+
+<!-- HOME -->
+<div class="page" id="homePage">
+<h3>Welcome to AR CHAMPION</h3>
+</div>
+
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav" id="nav" style="display:none;">
+<button onclick="show('homePage')">Home</button>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+apiKey: "AIzaSyB986IQ99ePq3ixqEtIkwer4jriufOtCwc",
+authDomain: "ai-ff-tournament.firebaseapp.com",
+projectId: "ai-ff-tournament"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let isLogin = true;
+
+/* ================= EMAIL LOGIN ================= */
+function handleAuth(){
+
+const btn=document.getElementById("authBtn");
+btn.disabled=true;
+
+const email=document.getElementById("email").value;
+const pass=document.getElementById("password").value;
+
+if(isLogin){
+
+auth.signInWithEmailAndPassword(email,pass)
+.then(()=>alert("Login Success"))
+.catch(e=>alert(e.message))
+.finally(()=>btn.disabled=false);
+
+}else{
+
+auth.createUserWithEmailAndPassword(email,pass)
+.then(async(cred)=>{
+await db.collection("users").doc(cred.user.uid).set({
+email,
+balance:0,
+username:"Player"
+});
+alert("Account Created");
+})
+.catch(e=>alert(e.message))
+.finally(()=>btn.disabled=false);
+}
+}
+
+/* ================= GOOGLE LOGIN ================= */
+const provider = new firebase.auth.GoogleAuthProvider();
+
+function googleLogin(){
+
+auth.signInWithPopup(provider)
+.then(async(result)=>{
+
+const user = result.user;
+const ref = db.collection("users").doc(user.uid);
+const doc = await ref.get();
+
+if(!doc.exists){
+await ref.set({
+email: user.email,
+username: user.displayName || "Player",
+balance: 0
+});
+}
+
+alert("Google Login Success");
+
+})
+.catch(e=>{
+alert(e.message);
+});
+}
+
+/* ================= AUTH STATE ================= */
+auth.onAuthStateChanged(user=>{
+if(user){
+document.getElementById("authPage").style.display="none";
+document.getElementById("nav").style.display="flex";
+show("homePage");
+}
+else{
+document.getElementById("authPage").style.display="block";
+document.getElementById("nav").style.display="none";
+}
+});
+
+/* ================= TOGGLE ================= */
+function toggle(){
+isLogin=!isLogin;
+document.getElementById("authTitle").innerText=isLogin?"Login":"Register";
+document.getElementById("authBtn").innerText=isLogin?"Login":"Register";
+document.getElementById("toggleText").innerText=isLogin?"Create Account":"Already Login";
+}
+
+/* ================= PAGE ================= */
+function show(id){
+document.querySelectorAll(".page").forEach(p=>p.style.display="none");
+document.getElementById(id).style.display="block";
+}
+</script>
+
+</body>
+</html>
